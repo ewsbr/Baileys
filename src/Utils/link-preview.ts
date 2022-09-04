@@ -23,7 +23,7 @@ export type URLGenerationOptions = {
  */
 export const getUrlInfo = async(
 	text: string,
-	opts: URLGenerationOptions = { thumbnailWidth: THUMBNAIL_WIDTH_PX, timeoutMs: 3000 }
+	opts: URLGenerationOptions = { thumbnailWidth: THUMBNAIL_WIDTH_PX, timeoutMs: 3000 },
 ): Promise<WAUrlInfo | undefined> => {
 	try {
 		const { getLinkPreview } = await import('link-preview-js')
@@ -46,10 +46,10 @@ export const getUrlInfo = async(
 
 			return {
 				'canonical-url': info.url,
-				'matched-text': text,
+				'matched-text': info.url,
 				title: info.title,
 				description: info.description,
-				jpegThumbnail
+				jpegThumbnail,
 			}
 		}
 	} catch(error) {
