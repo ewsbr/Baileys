@@ -280,7 +280,7 @@ export const generateWAMessageContent = async(
 			extContent.jpegThumbnail = urlInfo.jpegThumbnail
 			extContent.description = urlInfo.description
 			extContent.title = urlInfo.title
-			extContent.previewType = 0
+			extContent.previewType = 1
 		}
 
 		m.extendedTextMessage = extContent
