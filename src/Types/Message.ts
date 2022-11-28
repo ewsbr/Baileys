@@ -3,6 +3,7 @@ import type { Logger } from 'pino'
 import type { Readable } from 'stream'
 import type { URL } from 'url'
 import { proto } from '../../WAProto'
+import { MEDIA_HKDF_KEY_MAPPING } from '../Defaults'
 import type { GroupMetadata } from './GroupMetadata'
 
 // export the WAMessage Prototypes
@@ -41,6 +42,8 @@ export interface WAUrlInfo {
     title: string
     description?: string
     jpegThumbnail?: Buffer
+    highQualityThumbnail?: proto.Message.IImageMessage
+    originalThumbnailUrl?: string
 }
 
 // types to generate WA messages
@@ -75,7 +78,8 @@ type WithDimensions = {
     width?: number
     height?: number
 }
-export type MediaType = 'image' | 'video' | 'sticker' | 'audio' | 'document' | 'history' | 'md-app-state' | 'product-image'
+
+export type MediaType = keyof typeof MEDIA_HKDF_KEY_MAPPING
 export type AnyMediaMessageContent = (
     ({
         image: WAMediaUpload
@@ -102,6 +106,7 @@ export type AnyMediaMessageContent = (
         document: WAMediaUpload
         mimetype: string
         fileName?: string
+        caption?: string
     } & Buttonable & Templatable))
     & { mimetype?: string }
 
@@ -135,6 +140,9 @@ export type AnyRegularMessageContent = (
     | {
         buttonReply: ButtonReplyInfo
         type: 'template' | 'plain'
+    }
+    | {
+        listReply: Omit<proto.Message.IListResponseMessage, 'contextInfo'>
     }
     | {
         product: WASendableProduct,
@@ -190,6 +198,7 @@ export type WAMediaUploadFunction = (readStream: Readable, opts: { fileEncSha256
 
 export type MediaGenerationOptions = {
 	logger?: Logger
+    mediaTypeOverride?: MediaType
     upload: WAMediaUploadFunction
     /** cache media so it does not have to be uploaded again */
     mediaCache?: NodeCache
