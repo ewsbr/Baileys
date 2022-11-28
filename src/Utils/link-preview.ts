@@ -53,7 +53,7 @@ export const getUrlInfo = async(
 
 			const urlInfo: WAUrlInfo = {
 				'canonical-url': info.url,
-				'matched-text': info.url,
+				'matched-text': text,
 				title: info.title,
 				description: info.description,
 				originalThumbnailUrl: image
