@@ -725,7 +725,7 @@ export const makeChatsSocket = (config: SocketConfig) => {
 			)
 			: false
 
-		if(shouldProcessHistoryMsg && !authState.creds.myAppStateKeyId) {
+		if(historyMsg && !authState.creds.myAppStateKeyId) {
 			logger.warn('skipping app state sync, as myAppStateKeyId is not set')
 			pendingAppStateSync = true
 		}
@@ -733,7 +733,7 @@ export const makeChatsSocket = (config: SocketConfig) => {
 		await Promise.all([
 			(async() => {
 				if(
-					shouldProcessHistoryMsg
+					historyMsg
 					&& authState.creds.myAppStateKeyId
 				) {
 					pendingAppStateSync = false
@@ -822,7 +822,8 @@ export const makeChatsSocket = (config: SocketConfig) => {
 			// we keep buffering events until we finally have
 			// the key and can sync the messages
 			if(!authState.creds?.myAppStateKeyId) {
-				needToFlushWithAppStateSync = ev.buffer()
+				ev.buffer()
+				needToFlushWithAppStateSync = true
 			}
 		}
 	})
