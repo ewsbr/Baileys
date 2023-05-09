@@ -1,7 +1,7 @@
 import { Boom } from '@hapi/boom'
 import { proto } from '../../WAProto'
 import { PROCESSABLE_HISTORY_TYPES } from '../Defaults'
-import { ALL_WA_PATCH_NAMES, ChatModification, ChatMutation, LTHashState, MessageUpsertType, PresenceData, SocketConfig, WABusinessHoursConfig, WABusinessProfile, WAMediaUpload, WAMessage, WAPatchCreate, WAPatchName, WAPresence } from '../Types'
+import { ALL_WA_PATCH_NAMES, ChatModification, ChatMutation, LTHashState, MessageUpsertType, PresenceData, SocketConfig, WABusinessHoursConfig, WABusinessProfile, WAMediaUpload, WAMessage, WAPatchCreate, WAPatchName, WAPresence, WAPrivacyOnlineValue, WAPrivacyValue, WAReadReceiptsValue } from '../Types'
 import { chatModificationToAppPatch, ChatMutationMap, decodePatches, decodeSyncdSnapshot, encodeSyncdPatch, extractSyncdPatches, generateProfilePicture, getHistoryMsg, newLTHashState, processSyncAction } from '../Utils'
 import { makeMutex } from '../Utils/make-mutex'
 import processMessage from '../Utils/process-message'
@@ -59,6 +59,69 @@ export const makeChatsSocket = (config: SocketConfig) => {
 		}
 
 		return privacySettings
+	}
+
+	/** helper function to run a privacy IQ query */
+	const privacyQuery = async(name: string, value: string) => {
+		await query({
+			tag: 'iq',
+			attrs: {
+				xmlns: 'privacy',
+				to: S_WHATSAPP_NET,
+				type: 'set'
+			},
+			content: [{
+				tag: 'privacy',
+				attrs: {},
+				content: [
+					{
+						tag: 'category',
+						attrs: { name, value }
+					}
+				]
+			}]
+		})
+	}
+
+	const updateLastSeenPrivacy = async(value: WAPrivacyValue) => {
+		await privacyQuery('last', value)
+	}
+
+	const updateOnlinePrivacy = async(value: WAPrivacyOnlineValue) => {
+		await privacyQuery('online', value)
+	}
+
+	const updateProfilePicturePrivacy = async(value: WAPrivacyValue) => {
+		await privacyQuery('profile', value)
+	}
+
+	const updateStatusPrivacy = async(value: WAPrivacyValue) => {
+		await privacyQuery('status', value)
+	}
+
+	const updateReadReceiptsPrivacy = async(value: WAReadReceiptsValue) => {
+		await privacyQuery('readreceipts', value)
+	}
+
+	const updateGroupsAddPrivacy = async(value: WAPrivacyValue) => {
+		await privacyQuery('groupadd', value)
+	}
+
+	const updateDefaultDisappearingMode = async(duration: number) => {
+		await query({
+			tag: 'iq',
+			attrs: {
+				xmlns: 'disappearing_mode',
+				to: S_WHATSAPP_NET,
+				type: 'set'
+			},
+			content: [{
+				tag: 'disappearing_mode',
+				attrs: {
+					duration : duration.toString()
+				}
+			}]
+		})
 	}
 
 	/** helper function to run a generic IQ query */
@@ -161,6 +224,18 @@ export const makeChatsSocket = (config: SocketConfig) => {
 		})
 	}
 
+	/** remove the profile picture for yourself or a group */
+	const removeProfilePicture = async(jid: string) => {
+		await query({
+			tag: 'iq',
+			attrs: {
+				to: jidNormalizedUser(jid),
+				type: 'set',
+				xmlns: 'w:profile:picture'
+			}
+		})
+	}
+
 	/** update the profile status for yourself */
 	const updateProfileStatus = async(status: string) => {
 		await query({
@@ -245,8 +320,10 @@ export const makeChatsSocket = (config: SocketConfig) => {
 			const website = getBinaryNodeChild(profiles, 'website')
 			const email = getBinaryNodeChild(profiles, 'email')
 			const category = getBinaryNodeChild(getBinaryNodeChild(profiles, 'categories'), 'category')
-			const business_hours = getBinaryNodeChild(profiles, 'business_hours')
-			const business_hours_config = business_hours && getBinaryNodeChildren(business_hours, 'business_hours_config')
+			const businessHours = getBinaryNodeChild(profiles, 'business_hours')
+			const businessHoursConfig = businessHours
+				? getBinaryNodeChildren(businessHours, 'business_hours_config')
+				: undefined
 			const websiteStr = website?.content?.toString()
 			return {
 				wid: profiles.attrs?.jid,
@@ -255,9 +332,9 @@ export const makeChatsSocket = (config: SocketConfig) => {
 				website: websiteStr ? [websiteStr] : [],
 				email: email?.content?.toString(),
 				category: category?.content?.toString(),
-				business_hours: {
-					timezone: business_hours?.attrs?.timezone,
-					business_config: business_hours_config?.map(({ attrs }) => attrs as unknown as WABusinessHoursConfig)
+				'business_hours': {
+					timezone: businessHours?.attrs?.timezone,
+					'business_config': businessHoursConfig?.map(({ attrs }) => attrs as unknown as WABusinessHoursConfig)
 				}
 			}
 		}
@@ -339,7 +416,7 @@ export const makeChatsSocket = (config: SocketConfig) => {
 								name,
 								version: state.version.toString(),
 								// return snapshot if being synced from scratch
-								return_snapshot: (!state.version).toString()
+								'return_snapshot': (!state.version).toString()
 							}
 						})
 					}
@@ -494,14 +571,27 @@ export const makeChatsSocket = (config: SocketConfig) => {
 		}
 	}
 
-	const presenceSubscribe = (toJid: string) => (
+	/**
+	 * @param toJid the jid to subscribe to
+	 * @param tcToken token for subscription, use if present
+	 */
+	const presenceSubscribe = (toJid: string, tcToken?: Buffer) => (
 		sendNode({
 			tag: 'presence',
 			attrs: {
 				to: toJid,
 				id: generateMessageTag(),
 				type: 'subscribe'
-			}
+			},
+			content: tcToken
+				? [
+					{
+						tag: 'tctoken',
+						attrs: { },
+						content: tcToken
+					}
+				]
+				: undefined
 		})
 	)
 
@@ -586,7 +676,7 @@ export const makeChatsSocket = (config: SocketConfig) => {
 											attrs: {
 												name,
 												version: (state.version - 1).toString(),
-												return_snapshot: 'false'
+												'return_snapshot': 'false'
 											},
 											content: [
 												{
@@ -749,6 +839,7 @@ export const makeChatsSocket = (config: SocketConfig) => {
 					keyStore: authState.keys,
 					logger,
 					options: config.options,
+					getMessage: config.getMessage,
 				}
 			)
 		])
@@ -841,9 +932,17 @@ export const makeChatsSocket = (config: SocketConfig) => {
 		fetchBlocklist,
 		fetchStatus,
 		updateProfilePicture,
+		removeProfilePicture,
 		updateProfileStatus,
 		updateProfileName,
 		updateBlockStatus,
+		updateLastSeenPrivacy,
+		updateOnlinePrivacy,
+		updateProfilePicturePrivacy,
+		updateStatusPrivacy,
+		updateReadReceiptsPrivacy,
+		updateGroupsAddPrivacy,
+		updateDefaultDisappearingMode,
 		getBusinessProfile,
 		resyncAppState,
 		chatModify

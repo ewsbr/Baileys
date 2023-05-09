@@ -1,21 +1,20 @@
 # Baileys - Typescript/Javascript WhatsApp Web API
+
+Baileys does not require Selenium or any other browser to be interface with WhatsApp Web, it does so directly using a **WebSocket**. 
+Not running Selenium or Chromimum saves you like **half a gig** of ram :/ 
+Baileys supports interacting with the multi-device & web versions of WhatsApp.
+Thank you to [@pokearaujo](https://github.com/pokearaujo/multidevice) for writing his observations on the workings of WhatsApp Multi-Device. Also, thank you to [@Sigalor](https://github.com/sigalor/whatsapp-web-reveng) for writing his observations on the workings of WhatsApp Web and thanks to [@Rhymen](https://github.com/Rhymen/go-whatsapp/) for the __go__ implementation.
  
- Baileys does not require Selenium or any other browser to be interface with WhatsApp Web, it does so directly using a **WebSocket**. Not running Selenium or Chromimum saves you like **half a gig** of ram :/ 
+## Please Read
 
- Baileys supports interacting with the multi-device & web versions of WhatsApp.
-
- Thank you to [@pokearaujo](https://github.com/pokearaujo/multidevice) for writing his observations on the workings of WhatsApp Multi-Device. Also, thank you to [@Sigalor](https://github.com/sigalor/whatsapp-web-reveng) for writing his observations on the workings of WhatsApp Web and thanks to [@Rhymen](https://github.com/Rhymen/go-whatsapp/) for the __go__ implementation.
-
- Baileys is type-safe, extensible and simple to use. If you require more functionality than provided, it's super easy to write an extension. More on this [here](#WritingCustomFunctionality).
- 
- If you're interested in building a WhatsApp bot, you may wanna check out [WhatsAppInfoBot](https://github.com/adiwajshing/WhatsappInfoBot) and an actual bot built with it, [Messcat](https://github.com/ashokatechmin/Messcat).
-
- **Read the docs [here](https://adiwajshing.github.io/Baileys)**
+The original repository had to be removed by the original author - we now continue development in this repository here.
+This is the only official repository and is maintained by the community.
  **Join the Discord [here](https://discord.gg/WeJM5FP9GG)**
-
+ 
 ## Example
 
-Do check out & run [example.ts](https://github.com/adiwajshing/Baileys/blob/master/Example/example.ts) to see an example usage of the library.
+Do check out & run [example.ts](
+/blob/master/Example/example.ts) to see an example usage of the library.
 The script covers most common use cases.
 To run the example script, download or clone the repo and then type the following in a terminal:
 1. ``` cd path/to/Baileys ```
@@ -26,12 +25,12 @@ To run the example script, download or clone the repo and then type the followin
 
 Use the stable version:
 ```
-yarn add @adiwajshing/baileys
+temporarily unavailable
 ```
 
 Use the edge version (no guarantee of stability, but latest fixes + features)
 ```
-yarn add github:adiwajshing/baileys
+yarn add github:WhiskeySockets/Baileys
 ```
 
 Then import your code using:
@@ -742,6 +741,11 @@ await sock.sendMessage(
     const jid = '111234567890-1594482450@g.us' // can be your own too
     await sock.updateProfilePicture(jid, { url: './new-profile-picture.jpeg' })
     ```
+- To remove your display picture or a group's
+    ``` ts
+    const jid = '111234567890-1594482450@g.us' // can be your own too
+    await sock.removeProfilePicture(jid)
+    ```
 - To get someone's presence (if they're typing or online)
     ``` ts
     // the presence update is fetched and called here
@@ -833,7 +837,48 @@ Of course, replace ``` xyz ``` with an actual ID.
     console.log("joined to: " + response)
     ```
   Of course, replace ``` xxx ``` with invitation code.
-  
+
+## Privacy
+- To get the privacy settings
+    ``` ts
+    const privacySettings = await sock.fetchPrivacySettings(true)
+    console.log("privacy settings: " + privacySettings)
+    ```
+- To update the LastSeen privacy
+    ``` ts
+    const value = 'all' // 'contacts' | 'contact_blacklist' | 'none'
+    await sock.updateLastSeenPrivacy(value)
+    ```
+- To update the Online privacy
+    ``` ts
+    const value = 'all' // 'match_last_seen'
+    await sock.updateOnlinePrivacy(value)
+    ```
+- To update the Profile Picture privacy
+    ``` ts
+    const value = 'all' // 'contacts' | 'contact_blacklist' | 'none'
+    await sock.updateProfilePicturePrivacy(value)
+    ```
+- To update the Status privacy
+    ``` ts
+    const value = 'all' // 'contacts' | 'contact_blacklist' | 'none'
+    await sock.updateStatusPrivacy(value)
+    ```
+- To update the Read Receipts privacy
+    ``` ts
+    const value = 'all' // 'none'
+    await sock.updateReadReceiptsPrivacy(value)
+    ```
+- To update the Groups Add privacy
+    ``` ts
+    const value = 'all' // 'contacts' | 'contact_blacklist' | 'none'
+    await sock.updateGroupsAddPrivacy(value)
+    ```
+- To update the Default Disappearing Mode
+    ``` ts
+    const duration = 86400 // 604800 | 7776000 | 0 
+    await sock.updateDefaultDisappearingMode(duration)
+    ```
 ## Broadcast Lists & Stories
 
 **Note:** messages currently cannot be sent to broadcast lists from the MD version.
